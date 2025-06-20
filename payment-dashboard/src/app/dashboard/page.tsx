@@ -190,31 +190,67 @@ export default function DashboardPage() {
                   Claim Payment
                 </Button>
               </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Claim Payment Request</DialogTitle>
-                  <DialogDescription>
-                    Enter the nonce of the payment request you want to claim.
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader className="space-y-4">
+                  <DialogTitle className="text-2xl font-serif text-gray-900">Claim Payment Request</DialogTitle>
+                  <DialogDescription className="text-gray-600 font-sans leading-relaxed">
+                    Enter the nonce of the payment request you want to claim. This will transfer the payment to your account.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="nonce" className="block text-sm font-medium text-gray-700 mb-2">
-                      Nonce
+                <div className="space-y-6 py-4">
+                  <div className="space-y-3">
+                    <label htmlFor="nonce" className="block text-sm font-medium text-gray-700 font-sans">
+                      Payment Nonce
                     </label>
-                    <Input
-                      id="nonce"
-                      value={nonce}
-                      onChange={(e) => setNonce(e.target.value)}
-                      placeholder="Enter payment nonce"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="nonce"
+                        value={nonce}
+                        onChange={(e) => setNonce(e.target.value)}
+                        placeholder="Enter the payment nonce"
+                        className="rounded-xl border-gray-200 focus:border-amber-500 focus:ring-amber-500 font-mono text-sm"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 font-sans">
+                      The nonce is a unique identifier for the payment request
+                    </p>
                   </div>
+                  
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <div className="flex items-start space-x-3">
+                      <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <h4 className="font-medium text-blue-800 mb-1 font-sans">How it works</h4>
+                        <p className="text-sm text-blue-700 font-sans">
+                          When you claim a payment, the funds will be transferred from the payment request to your account balance.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <Button 
                     onClick={handleClaimPayment} 
                     disabled={claiming || !nonce.trim()}
-                    className="w-full"
+                    className="w-full bg-amber-800 hover:bg-amber-900 disabled:bg-amber-600 text-white font-medium py-3 px-6 rounded-xl transition-colors flex items-center justify-center space-x-2 font-sans"
                   >
-                    {claiming ? 'Claiming...' : 'Claim Payment'}
+                    {claiming ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>Claiming Payment...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        <span>Claim Payment</span>
+                      </>
+                    )}
                   </Button>
                 </div>
               </DialogContent>

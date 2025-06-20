@@ -2,10 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { User, getUser, logout, getToken } from '../lib/auth';
+import PaymentModal from '../components/PaymentModal';
+
+const PAINTING_PRICE = 0;
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -30,8 +34,22 @@ export default function Home() {
   };
 
   const handlePurchase = () => {
-    // This would integrate with a payment system
-    alert('Purchase functionality would be integrated here');
+    if (!user) return;
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentComplete = (updatedUser: User) => {
+    setUser(updatedUser);
+  };
+
+  const formatPurchaseDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   if (loading) {
@@ -112,7 +130,7 @@ export default function Home() {
             <div className="space-y-4">
               <div className="flex justify-between items-center py-4 border-t border-gray-100">
                 <span className="font-serif text-xl text-gray-900">Price</span>
-                <span className="font-serif text-2xl text-amber-800">$2,800</span>
+                <span className="font-serif text-2xl text-amber-800">${PAINTING_PRICE}</span>
               </div>
               
               <div className="flex justify-between items-center py-4 border-t border-gray-100">
@@ -127,12 +145,30 @@ export default function Home() {
             </div>
 
             {user ? (
-              <button
-                onClick={handlePurchase}
-                className="w-full bg-amber-800 hover:bg-amber-900 text-white font-sans font-medium py-4 px-8 rounded-lg transition-colors duration-200"
-              >
-                Purchase Painting
-              </button>
+              <div className="space-y-4">
+                {user.hasPurchased ? (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-medium text-green-800">Purchase Complete</span>
+                    </div>
+                    {user.purchasedAt && (
+                      <p className="text-sm text-green-700">
+                        Purchased on {formatPurchaseDate(user.purchasedAt)}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={handlePurchase}
+                    className="w-full bg-amber-800 hover:bg-amber-900 text-white font-sans font-medium py-4 px-8 rounded-lg transition-colors duration-200"
+                  >
+                    Purchase Painting
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gray-600 font-sans text-center">
@@ -171,6 +207,16 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Payment Modal */}
+      {user && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          user={user}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
     </div>
   );
 } 

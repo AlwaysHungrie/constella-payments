@@ -1,12 +1,24 @@
 import Cookies from 'js-cookie';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const PAYMENTS_API_URL = process.env.NEXT_PUBLIC_PAYMENTS_API_URL || 'http://localhost:5001';
 
 export interface User {
   id: string;
   email: string;
   name: string | null;
   picture: string | null;
+  hasPurchased: boolean;
+  purchasedAt: string | null;
+  createdAt: string;
+}
+
+export interface PaymentRequest {
+  id: string;
+  nonce: string;
+  walletAddress: string;
+  amount: number;
+  status: string;
   createdAt: string;
 }
 
@@ -61,4 +73,62 @@ export const logout = async (): Promise<void> => {
     }
   }
   removeToken();
+};
+
+// Generate a random nonce
+export const generateNonce = (): string => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+// Create a payment request
+export const createPaymentRequest = async (nonce: string): Promise<PaymentRequest | null> => {
+  try {
+    const response = await fetch(`${PAYMENTS_API_URL}/api/payments/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ nonce })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create payment request');
+    }
+
+    const data = await response.json();
+    return data.paymentRequest;
+  } catch (error) {
+    console.error('Error creating payment request:', error);
+    return null;
+  }
+};
+
+// Complete payment by claiming it
+export const completePayment = async (nonce: string): Promise<User | null> => {
+  const token = getToken();
+  if (!token) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/claim`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ nonce })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to complete payment');
+    }
+
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    console.error('Error completing payment:', error);
+    throw error;
+  }
 }; 

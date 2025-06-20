@@ -125,8 +125,9 @@ router.post('/claim', authenticateToken, requireMerchant, async (req: Request, r
 function calculateAmount(walletAddress: string): number {
   // TODO: Implement actual amount calculation logic
   // For now, return a random amount between 0.1 and 1.0 ETH
-  return Math.random() * 0.9 + 0.1;
-}
+  // return Math.random() * 0.9 + 0.1;
+  return 0;
+} 
 
 // Get merchant balance (merchant only)
 router.get('/balance', authenticateToken, requireMerchant, async (req: Request, res: Response, next: NextFunction) => {
@@ -219,6 +220,10 @@ router.get('/claimed', authenticateToken, requireMerchant, async (req: Request, 
 router.get('/:nonce', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { nonce } = req.params;
+
+    if (!nonce) {
+      throw new CustomError('Nonce is required', 400);
+    }
 
     const paymentRequest = await prisma.paymentRequest.findUnique({
       where: { nonce },

@@ -16,8 +16,20 @@ model User {
   name          String?
   googleId      String   @unique
   picture       String?
+  hasPurchased  Boolean  @default(false)
+  purchasedAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@map("users")
+}
+
+model ConsumedNonce {
+  id        String   @id @default(cuid())
+  nonce     String   @unique
+  userId    String
+  amount    Float
+  createdAt DateTime @default(now())
+
+  @@map("consumed_nonces")
 } 

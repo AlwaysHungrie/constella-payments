@@ -13,6 +13,15 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
+// Extend Express Request interface
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string;
+    }
+  }
+}
+
 // Middleware
 app.use(express.json());
 app.use(cors({
@@ -76,6 +85,24 @@ passport.deserializeUser(async (id: string, done) => {
   }
 });
 
+// User authentication middleware
+const authenticateUser = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    
+    req.userId = decoded.userId;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
 // Routes
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
@@ -94,23 +121,126 @@ app.get('/auth/google/callback',
   }
 );
 
-app.get('/api/user', async (req, res) => {
+// Claim payment endpoint
+app.post('/api/claim', authenticateUser, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'No token provided' });
+    const { nonce } = req.body;
+    const userId = req.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-    
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+    // Check if nonce is already consumed
+    const existingNonce = await prisma.consumedNonce.findUnique({
+      where: { nonce }
+    });
+
+    if (existingNonce) {
+      return res.status(409).json({ error: 'Nonce already consumed' });
+    }
+
+    // First, authenticate with payments-server to get merchant token
+    const loginResponse = await fetch('http://localhost:5001/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: process.env.MERCHANT_USERNAME,
+        password: process.env.MERCHANT_PASSWORD
+      })
+    });
+
+    if (!loginResponse.ok) {
+      const loginError = await loginResponse.json();
+      console.error('Payments-server login failed:', loginError);
+      return res.status(500).json({ error: 'Failed to authenticate with payment server' });
+    }
+
+    const loginData = await loginResponse.json() as any;
+    const merchantToken = loginData.token;
+
+    // Call payments-server to claim the payment using the merchant token
+    const paymentsResponse = await fetch('http://localhost:5001/api/payments/claim', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${merchantToken}`
+      },
+      body: JSON.stringify({ nonce })
+    });
+
+    if (!paymentsResponse.ok) {
+      const errorData = await paymentsResponse.json();
+      return res.status(paymentsResponse.status).json(errorData);
+    }
+
+    const paymentData = await paymentsResponse.json() as any;
+    const amount = paymentData.paymentRequest.amount;
+
+    // Check if amount is sufficient (painting price is $0)
+    const PAINTING_PRICE = 0;
+    if (amount < PAINTING_PRICE) {
+      return res.status(400).json({ 
+        error: 'Insufficient payment amount',
+        required: PAINTING_PRICE,
+        received: amount
+      });
+    }
+
+    // Mark nonce as consumed
+    await prisma.consumedNonce.create({
+      data: {
+        nonce,
+        userId,
+        amount
+      }
+    });
+
+    // Update user's purchase status
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        hasPurchased: true,
+        purchasedAt: new Date()
+      },
       select: {
         id: true,
         email: true,
         name: true,
         picture: true,
+        hasPurchased: true,
+        purchasedAt: true,
+        createdAt: true
+      }
+    });
+
+    res.json({
+      message: 'Payment completed successfully',
+      amount,
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Claim error:', error);
+    res.status(500).json({ error: 'Failed to process payment' });
+  }
+});
+
+app.get('/api/user', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.userId;
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        picture: true,
+        hasPurchased: true,
+        purchasedAt: true,
         createdAt: true
       }
     });
@@ -122,6 +252,38 @@ app.get('/api/user', async (req, res) => {
     res.json(user);
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+app.post('/api/purchase', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.userId;
+    
+    // Update user's purchase status
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        hasPurchased: true,
+        purchasedAt: new Date()
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        picture: true,
+        hasPurchased: true,
+        purchasedAt: true,
+        createdAt: true
+      }
+    });
+
+    res.json({ 
+      message: 'Purchase recorded successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Purchase error:', error);
+    res.status(500).json({ error: 'Failed to record purchase' });
   }
 });
 
