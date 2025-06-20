@@ -25,7 +25,7 @@ export default function Home() {
   }, []);
 
   const handleLogin = () => {
-    window.location.href = 'http://localhost:3001/auth/google';
+    window.location.href = 'https://demo-backend.constella.one/auth/google';
   };
 
   const handleLogout = async () => {
