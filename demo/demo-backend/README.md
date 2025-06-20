@@ -69,6 +69,7 @@ docker run --name demo-postgres \
 6. Add authorized redirect URIs:
    - `http://localhost:3001/auth/google/callback` (for development)
    - `https://yourdomain.com/auth/google/callback` (for production)
+   - **Important**: Make sure the redirect URI matches exactly what you set in your `BACKEND_URL` environment variable
 7. Copy the Client ID and Client Secret
 
 ### 4. Environment Configuration
@@ -96,6 +97,7 @@ docker run --name demo-postgres \
    # Server
    PORT=3001
    NODE_ENV=development
+   BACKEND_URL="http://localhost:3001"
    
    # Frontend URL
    FRONTEND_URL="http://localhost:3000"
