@@ -12,16 +12,31 @@ datasource db {
 
 model Merchant {
   id        String   @id @default(cuid())
-  username  String   @unique @db.VarChar(50)
-  password  String   @db.VarChar(255)
-  name      String?  @db.VarChar(100)
+  username  String   @unique 
+  password  String   
+  name      String?  
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations can be added here for future features
-  // payments Payment[]
-  // transactions Transaction[]
+  paymentRequests PaymentRequest[]
 
   @@map("merchants")
 } 
+
+model PaymentRequest {
+  id        String   @id @default(cuid())
+  nonce     String   @unique 
+
+  walletAddress String  
+  walletPrivateKey String  
+
+  amount Float @default(0)
+  status String @default("pending") // pending, claimed
+  merchantId String?
+  merchant Merchant? @relation(fields: [merchantId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payment_requests")
+}

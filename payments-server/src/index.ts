@@ -4,13 +4,14 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { authRoutes } from './routes/auth';
+import { paymentRoutes } from './routes/payments';
 import { errorHandler } from './middleware/errorHandler';
 
 // Load environment variables
 dotenv.config();
 
 const app: Application = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5001;
 
 // Security middleware
 app.use(helmet());
@@ -43,6 +44,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -71,6 +73,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth`);
+  console.log(`💸 Payment endpoints: http://localhost:${PORT}/api/payments`);
 });
 
 export default app; 

@@ -137,4 +137,58 @@ curl -X GET http://localhost:5001/api/auth/me \
 - Passwords must be at least 8 characters long
 - Name is optional during signup
 - All error responses follow the format: `{"error": "Error message"}`
-- Rate limiting is enabled (100 requests per 15 minutes per IP) 
+- Rate limiting is enabled (100 requests per 15 minutes per IP)
+
+## Payment Endpoints
+
+### 1. Create Payment Request (Public)
+```bash
+curl -X POST http://localhost:5001/api/payments/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nonce": "test-nonce-123"
+  }'
+```
+
+### 2. Get Payment Request (Public)
+```bash
+curl -X GET http://localhost:5001/api/payments/test-nonce-123
+```
+
+### 3. Claim Payment Request (Merchant Only)
+```bash
+# First get token from login, then use it
+curl -X POST http://localhost:5001/api/payments/claim \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -d '{
+    "nonce": "test-nonce-123"
+  }'
+```
+
+### 4. Get Merchant Balance (Merchant Only)
+```bash
+curl -X GET http://localhost:5001/api/payments/balance \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+```
+
+## Test Flow
+1. Create a merchant account
+2. Login to get JWT token
+3. Create a payment request with a unique nonce
+4. Verify the payment request was created (check wallet address is returned)
+5. Claim the payment request as the merchant
+6. Check merchant balance
+7. Claim the same payment request again as the same merchant (should succeed and update amount)
+8. Try to claim with different merchant (should fail)
+9. Check merchant balance again (should show updated total)
+
+## Expected Behavior
+- Payment requests can be created by anyone with a unique nonce
+- Each payment request gets a unique Ethereum wallet address
+- Only merchants can claim payment requests
+- The same merchant can claim a payment request multiple times
+- When a merchant re-claims a payment request, the amount is recalculated and updated
+- Different merchants cannot claim a payment request that's already claimed by another merchant
+- Merchant balance shows sum of all claimed payment request amounts
+- Private keys are never returned to users 

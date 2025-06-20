@@ -1,0 +1,31 @@
+{
+  "development": {
+    "backend": {
+      "port": 5001,
+      "url": "http://localhost:5001"
+    },
+    "frontend": {
+      "port": 5002,
+      "url": "http://localhost:5002"
+    },
+    "database": {
+      "port": 5432,
+      "host": "localhost"
+    }
+  },
+  "api": {
+    "baseUrl": "http://localhost:5001/api",
+    "endpoints": {
+      "auth": {
+        "signup": "/auth/signup",
+        "login": "/auth/login",
+        "profile": "/auth/me"
+      },
+      "payments": {
+        "claim": "/payments/claim",
+        "balance": "/payments/balance",
+        "claimed": "/payments/claimed"
+      }
+    }
+  }
+} 
