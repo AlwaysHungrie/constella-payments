@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { z } from 'zod';
 
 // Validation schemas
@@ -10,7 +10,6 @@ export const signupSchema = z.object({
   password: z.string().min(8, {
     message: 'Password must be at least 8 characters long'
   }),
-  email: z.string().email().optional(),
   name: z.string().min(1).max(100).optional(),
 });
 
@@ -29,6 +28,10 @@ export const generateToken = (merchantId: string, username: string): string => {
     throw new Error('JWT_SECRET is not configured');
   }
 
+  const options: SignOptions = {
+    expiresIn: 7 * 24 * 60 * 60 // 7 days in seconds
+  };
+
   return jwt.sign(
     { 
       merchantId, 
@@ -36,9 +39,7 @@ export const generateToken = (merchantId: string, username: string): string => {
       type: 'merchant'
     },
     secret,
-    { 
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
-    }
+    options
   );
 };
 

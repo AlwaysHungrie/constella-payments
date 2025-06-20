@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
 
 export interface AppError extends Error {
   statusCode?: number;
@@ -7,7 +8,7 @@ export interface AppError extends Error {
 }
 
 export const errorHandler = (
-  error: AppError | ZodError,
+  error: AppError | ZodError | PrismaClientKnownRequestError | PrismaClientValidationError,
   req: Request,
   res: Response,
   next: NextFunction
@@ -31,21 +32,47 @@ export const errorHandler = (
     return;
   }
 
+  // Handle Prisma unique constraint violations
+  if (error instanceof PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') {
+      statusCode = 409;
+      message = 'A record with this information already exists';
+      
+      // Provide more specific message for username conflicts
+      if (error.meta?.target && Array.isArray(error.meta.target) && error.meta.target.includes('username')) {
+        message = 'Username already exists';
+      }
+    } else if (error.code === 'P2025') {
+      statusCode = 404;
+      message = 'Record not found';
+    } else {
+      statusCode = 400;
+      message = 'Database operation failed';
+    }
+    
+    res.status(statusCode).json({
+      error: message,
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
+    return;
+  }
+
+  // Handle Prisma validation errors
+  if (error instanceof PrismaClientValidationError) {
+    statusCode = 400;
+    message = 'Invalid data provided';
+    
+    res.status(statusCode).json({
+      error: message,
+      ...(process.env.NODE_ENV === 'development' && { details: error.message })
+    });
+    return;
+  }
+
   // Handle custom app errors
   if (error.statusCode) {
     statusCode = error.statusCode;
     message = error.message;
-  }
-
-  // Handle specific error types
-  if (error.name === 'PrismaClientKnownRequestError') {
-    statusCode = 400;
-    message = 'Database operation failed';
-  }
-
-  if (error.name === 'PrismaClientValidationError') {
-    statusCode = 400;
-    message = 'Invalid data provided';
   }
 
   // Log error in development

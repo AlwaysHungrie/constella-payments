@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { 
   signupSchema, 
@@ -12,50 +12,33 @@ import {
 import { CustomError } from '../middleware/errorHandler';
 import { authenticateToken, requireMerchant } from '../middleware/auth';
 
-const router = Router();
+const router: Router = Router();
 
 // Merchant signup
-router.post('/signup', async (req: Request, res: Response) => {
+router.post('/signup', async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Validate input
     const validatedData = signupSchema.parse(req.body);
-    const { username, password, email, name }: SignupInput = validatedData;
-
-    // Check if username already exists
-    const existingMerchant = await prisma.merchant.findUnique({
-      where: { username }
-    });
-
-    if (existingMerchant) {
-      throw new CustomError('Username already exists', 409);
-    }
-
-    // Check if email already exists (if provided)
-    if (email) {
-      const existingEmail = await prisma.merchant.findUnique({
-        where: { email }
-      });
-
-      if (existingEmail) {
-        throw new CustomError('Email already exists', 409);
-      }
-    }
+    const { username, password, name }: SignupInput = validatedData;
 
     // Hash password
     const hashedPassword = await hashPassword(password);
 
     // Create merchant
+    const merchantData: any = {
+      username,
+      password: hashedPassword,
+    };
+
+    if (name) {
+      merchantData.name = name;
+    }
+
     const merchant = await prisma.merchant.create({
-      data: {
-        username,
-        password: hashedPassword,
-        email,
-        name,
-      },
+      data: merchantData,
       select: {
         id: true,
         username: true,
-        email: true,
         name: true,
         isActive: true,
         createdAt: true,
@@ -72,15 +55,12 @@ router.post('/signup', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    if (error instanceof CustomError) {
-      throw error;
-    }
-    throw new CustomError('Failed to create merchant', 500);
+    next(error);
   }
 });
 
 // Merchant login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Validate input
     const validatedData = loginSchema.parse(req.body);
@@ -114,7 +94,6 @@ router.post('/login', async (req: Request, res: Response) => {
       merchant: {
         id: merchant.id,
         username: merchant.username,
-        email: merchant.email,
         name: merchant.name,
         isActive: merchant.isActive,
         createdAt: merchant.createdAt,
@@ -123,22 +102,18 @@ router.post('/login', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    if (error instanceof CustomError) {
-      throw error;
-    }
-    throw new CustomError('Login failed', 500);
+    next(error);
   }
 });
 
 // Get current merchant profile (protected route)
-router.get('/me', authenticateToken, requireMerchant, async (req: Request, res: Response) => {
+router.get('/me', authenticateToken, requireMerchant, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const merchant = await prisma.merchant.findUnique({
       where: { id: req.user!.merchantId },
       select: {
         id: true,
         username: true,
-        email: true,
         name: true,
         isActive: true,
         createdAt: true,
@@ -153,10 +128,7 @@ router.get('/me', authenticateToken, requireMerchant, async (req: Request, res: 
     res.json({ merchant });
 
   } catch (error) {
-    if (error instanceof CustomError) {
-      throw error;
-    }
-    throw new CustomError('Failed to fetch merchant profile', 500);
+    next(error);
   }
 });
 
