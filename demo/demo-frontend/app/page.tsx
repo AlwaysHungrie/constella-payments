@@ -243,6 +243,7 @@ export default function Home() {
           onClose={() => setShowPaymentModal(false)}
           user={user}
           onPaymentComplete={handlePaymentComplete}
+          price={PAINTING_PRICE}
         />
       )}
 
