@@ -287,6 +287,38 @@ app.post('/api/purchase', authenticateUser, async (req, res) => {
   }
 });
 
+app.post('/api/reset', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.userId;
+    
+    // Update user's purchase status
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        hasPurchased: false,
+        purchasedAt: null
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        picture: true,
+        hasPurchased: true,
+        purchasedAt: true,
+        createdAt: true
+      }
+    });
+
+    res.json({ 
+      message: 'Reset successful',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Reset error:', error);
+    res.status(500).json({ error: 'Failed to reset user' });
+  }
+});
+
 app.get('/api/logout', (req, res) => {
   req.logout(() => {
     res.json({ message: 'Logged out successfully' });

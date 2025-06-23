@@ -131,4 +131,33 @@ export const completePayment = async (nonce: string): Promise<User | null> => {
     console.error('Error completing payment:', error);
     throw error;
   }
+};
+
+// Reset user's purchase status
+export const resetUser = async (): Promise<User | null> => {
+  const token = getToken();
+  if (!token) {
+    throw new Error('User not authenticated');
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/reset`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to reset user');
+    }
+
+    const data = await response.json();
+    return data.user;
+  } catch (error) {
+    console.error('Error resetting user:', error);
+    throw error;
+  }
 }; 
