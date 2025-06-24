@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   User,
   generateNonce,
@@ -69,7 +69,7 @@ export default function PaymentModal({
     }
   }
 
-  const handleCompletePayment = async () => {
+  const handleCompletePayment = useCallback(async () => {
     if (!paymentRequest) return
 
     setLoading(true)
@@ -93,7 +93,22 @@ export default function PaymentModal({
     } finally {
       setLoading(false)
     }
-  }
+  }, [paymentRequest, onPaymentComplete, onClose])
+
+  const handleOneClickPayment = useCallback(async () => {
+    const redirectHost = window.location.host
+    const redirectUrl = `http://${redirectHost}/complete-payment?nonce=${nonce}`
+
+    const walletUrl = `${
+      process.env.NEXT_PUBLIC_QUICKPAY_URL
+    }/quick-pay?toAddress=${
+      paymentRequest?.walletAddress
+    }&amount=${price}&redirectUrl=${encodeURIComponent(redirectUrl)}`
+
+    console.log('walletUrl', walletUrl)
+
+    window.open(walletUrl, '_blank')
+  }, [nonce, paymentRequest?.walletAddress, price])
 
   const handleClose = () => {
     if (step === 'complete') {
@@ -187,6 +202,20 @@ export default function PaymentModal({
                       ${price}
                     </p>
                   </div>
+                </div>
+
+                {/* Redirect to Wallet */}
+                <button
+                  onClick={handleOneClickPayment}
+                  className="w-full flex-1 bg-amber-800 hover:bg-amber-900 disabled:bg-amber-600 text-white font-medium py-3 px-4 rounded-xl transition-colors flex items-center justify-center space-x-2 font-sans text-sm"
+                >
+                  <span>One Click Pay with Constella</span>
+                </button>
+
+                <div className="text-center text-gray-600 font-sans flex items-center justify-center space-x-8">
+                  <div className="w-full h-px bg-gray-200 my-4"></div>
+                  <span>or</span>
+                  <div className="w-full h-px bg-gray-200 my-4"></div>
                 </div>
 
                 {/* Wallet Address */}

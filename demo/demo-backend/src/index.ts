@@ -126,7 +126,7 @@ app.post('/api/claim', authenticateUser, async (req, res) => {
   try {
     const { nonce } = req.body;
     const userId = req.userId;
-    
+
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
