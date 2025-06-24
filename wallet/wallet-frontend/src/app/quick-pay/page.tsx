@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,7 +21,7 @@ interface TransferResponse {
   isSuccess: boolean
 }
 
-export default function QuickPayPage() {
+function QuickPayForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -233,5 +233,13 @@ export default function QuickPayPage() {
         />
       )}
     </div>
+  )
+}
+
+export default function QuickPayPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>}>
+      <QuickPayForm />
+    </Suspense>
   )
 } 
